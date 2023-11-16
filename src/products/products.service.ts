@@ -88,14 +88,30 @@ export class ProductsService {
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
-    await this.ProductModel.findByIdAndUpdate(id, updateProductDto, {
-      new: true,
-    });
-
+    const updateProduct = await this.ProductModel.findByIdAndUpdate(
+      id,
+      updateProductDto,
+      {
+        new: true,
+      },
+    );
+    if (!updateProduct) {
+      throw new HttpException(
+        'El producto no se encontró',
+        HttpStatus.NOT_FOUND,
+      );
+    }
     return 'El producto se modificó exitosamente';
   }
 
   async remove(id: string) {
+    const product = await this.ProductModel.findById(id);
+    if (!product) {
+      throw new HttpException(
+        'El producto no se encontró o ya fué eliminado',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     await this.ProductModel.findByIdAndRemove(id);
     return `El producto se eliminó correctamente`;
   }
