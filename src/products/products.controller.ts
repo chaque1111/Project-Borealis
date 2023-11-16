@@ -7,18 +7,29 @@ import {
   Param,
   Delete,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @UseGuards(AuthGuard)
   @Post()
-  async create(@Body() createProductDto: CreateProductDto): Promise<string> {
-    return this.productsService.createProduct(createProductDto);
+  async create(
+    @Body() createProductDto: CreateProductDto,
+    @Req() request: Request,
+  ): Promise<string> {
+
+    return this.productsService.createProduct(
+      createProductDto,
+      request['user']
+    );
   }
 
   @Get()

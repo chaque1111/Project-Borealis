@@ -27,9 +27,8 @@ export class UsersController {
   @Get()
   findAll(@Req() request: Request) {
     const user = request['user'];
-    console.log();
 
-    return this.usersService.findAll();
+    return this.usersService.findAll(user);
   }
 
   @Get(':id')

@@ -12,37 +12,42 @@ export class ProductsService {
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
   ) {}
 
-  async createProduct(createProductDto: CreateProductDto) {
+  async createProduct(createProductDto: CreateProductDto, user: object) {
+    //Check admin
+    if (user['admin'])
+      throw new HttpException('UNAUTHORIZED', HttpStatus.UNAUTHORIZED);
     //Remove Tildes
-    function removeTildes(texto: string): string {
-      const tildes = {
-        á: 'a',
-        é: 'e',
-        í: 'i',
-        ó: 'o',
-        ú: 'u',
-        Á: 'A',
-        É: 'E',
-        Í: 'I',
-        Ó: 'O',
-        Ú: 'U',
-      };
-      return texto.replace(/[áéíóúÁÉÍÓÚ]/g, (letra) => tildes[letra]);
-    }
-    const product = await this.ProductModel.find({
-      name: removeTildes(createProductDto.name),
-    });
-    if (product.length)
-      throw new HttpException(
-        'Ya existe un producto con ese nombre',
-        HttpStatus.CONFLICT,
-      );
-    else
-      this.ProductModel.create({
-        ...createProductDto,
+    else {
+      function removeTildes(texto: string): string {
+        const tildes = {
+          á: 'a',
+          é: 'e',
+          í: 'i',
+          ó: 'o',
+          ú: 'u',
+          Á: 'A',
+          É: 'E',
+          Í: 'I',
+          Ó: 'O',
+          Ú: 'U',
+        };
+        return texto.replace(/[áéíóúÁÉÍÓÚ]/g, (letra) => tildes[letra]);
+      }
+      const product = await this.ProductModel.find({
         name: removeTildes(createProductDto.name),
       });
-    return 'El producto se creó correctamente';
+      if (product.length)
+        throw new HttpException(
+          'Ya existe un producto con ese nombre',
+          HttpStatus.CONFLICT,
+        );
+      else
+        this.ProductModel.create({
+          ...createProductDto,
+          name: removeTildes(createProductDto.name),
+        });
+      return 'El producto se creó correctamente';
+    }
   }
 
   async findAll(query: object) {

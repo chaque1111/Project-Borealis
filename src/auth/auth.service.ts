@@ -47,7 +47,11 @@ export class AuthService {
           email: user.email,
           admin: user.admin,
         };
-        return await this.jwtService.signAsync(userData);
+        const token = await this.jwtService.signAsync(userData);
+        return {
+          token,
+          userData,
+        };
       } else {
         throw new HttpException(
           'correo electrónico o contraseña incorrecta',

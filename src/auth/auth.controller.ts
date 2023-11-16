@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Res, HttpStatus, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { registerAuthDto } from './dto/register-auth.dto';
 import { loginAuthDto } from './dto/login-auth.dto';
@@ -14,11 +14,16 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: loginAuthDto, @Res() res: Response) {
+  async login(
+    @Body() loginDto: loginAuthDto,
+    @Res() res: Response,
+    @Req() request: Request,
+  ) {
     const response = await this.authService.login(loginDto);
+    console.log(request['user']);
     res
       .status(HttpStatus.ACCEPTED)
-      .header({ Authorization: response })
-      .send('OK');
+      .header({ Authorization: response.token })
+      .send(response.userData);
   }
 }
