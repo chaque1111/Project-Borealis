@@ -14,7 +14,7 @@ export class ProductsService {
 
   async createProduct(createProductDto: CreateProductDto, user: object) {
     //Check admin
-    if (user['admin'])
+    if (!user['admin'])
       throw new HttpException('UNAUTHORIZED', HttpStatus.UNAUTHORIZED);
     //Remove Tildes
     else {
@@ -92,7 +92,9 @@ export class ProductsService {
     }
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
+  async update(id: string, updateProductDto: UpdateProductDto, user: object) {
+    if (!user['admin'])
+      throw new HttpException('UNAUTHORIZED', HttpStatus.UNAUTHORIZED);
     const updateProduct = await this.ProductModel.findByIdAndUpdate(
       id,
       updateProductDto,
@@ -109,15 +111,17 @@ export class ProductsService {
     return 'El producto se modificó exitosamente';
   }
 
-  async remove(id: string) {
-    const product = await this.ProductModel.findById(id);
-    if (!product) {
-      throw new HttpException(
-        'El producto no se encontró o ya fué eliminado',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    await this.ProductModel.findByIdAndRemove(id);
-    return `El producto se eliminó correctamente`;
+  async remove(id: string, user: object) {
+    if (user['admin']) {
+      const product = await this.ProductModel.findById(id);
+      if (!product) {
+        throw new HttpException(
+          'El producto no se encontró o ya fué eliminado',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      await this.ProductModel.findByIdAndRemove(id);
+      return `El producto se eliminó correctamente`;
+    } else throw new HttpException('UNATHORIZED', HttpStatus.UNAUTHORIZED);
   }
 }
