@@ -9,7 +9,7 @@ export class Product {
   price: string;
 
   @Prop({ required: true })
-  image: string;
+  image: string[];
 
   @Prop({ required: true })
   size: string[];
@@ -17,7 +17,7 @@ export class Product {
   @Prop({ required: true })
   category: string;
 
-  @Prop({ required: true })
+  @Prop()
   description: string;
 
   @Prop({ required: true })

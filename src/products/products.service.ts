@@ -4,20 +4,26 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product } from './schema/product.schema';
 import { Model } from 'mongoose';
-import { HTTPResponse } from 'puppeteer';
-
+import { filterProductDto } from './dto/filter-product.dto';
+import { UploadService } from 'src/upload/upload.service';
+import * as crypto from 'crypto';
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
+    private readonly uploadService: UploadService,
   ) {}
 
-  async createProduct(createProductDto: CreateProductDto, user: object) {
+  async createProduct(
+    createProductDto: CreateProductDto,
+    user: object,
+    files: Express.Multer.File[],
+  ) {
     //Check admin
     if (!user['admin'])
       throw new HttpException('UNAUTHORIZED', HttpStatus.UNAUTHORIZED);
-    //Remove Tildes
     else {
+      //Remove Tildes
       function removeTildes(texto: string): string {
         const tildes = {
           á: 'a',
@@ -41,22 +47,53 @@ export class ProductsService {
           'Ya existe un producto con ese nombre',
           HttpStatus.CONFLICT,
         );
-      else
+      else {
+        const images: string[] = [];
+
+        //Upload images to s3 bucket aws
+        for (const element of files['images']) {
+          let randomImageName = crypto.randomBytes(16).toString('hex');
+          images.push(randomImageName);
+          await this.uploadService.upload(
+            randomImageName,
+            element.buffer,
+            element.mimetype,
+          );
+        }
         this.ProductModel.create({
           ...createProductDto,
           name: removeTildes(createProductDto.name),
+          image: images,
         });
-      return 'El producto se creó correctamente';
+        return 'El producto se creó correctamente';
+      }
     }
   }
 
-  async findAll(query: object) {
-    const productsPerPage = 10;
+  async findAll(query: object, filterDto: filterProductDto) {
     const page = query['currentPage'] || 1;
-    const skip = productsPerPage * (page - 1);
-    //Search by Name
-    if (query['name']) {
-      //Remove Tildes Function
+    const pageSize = 3;
+    const skip = (page - 1) * pageSize;
+    const limit = pageSize;
+    if (
+      !query['name'] &&
+      !filterDto.color &&
+      !filterDto.price &&
+      !filterDto.size
+    ) {
+      const productsDb = await this.ProductModel.find().skip(skip).limit(limit);
+      const productsSigned = [];
+      for (const element of productsDb) {
+        const imageSigned = await this.uploadService.getImages(
+          element.image[0],
+        );
+        productsSigned.push({
+          ...element['_doc'],
+          image: imageSigned,
+        });
+      }
+      return productsSigned;
+    } else {
       function removeTildes(texto: string): string {
         const tildes = {
           á: 'a',
@@ -72,18 +109,58 @@ export class ProductsService {
         };
         return texto.replace(/[áéíóúÁÉÍÓÚ]/g, (letra) => tildes[letra]);
       }
+      let conditions: any = {};
 
-      return await this.ProductModel.find({
-        name: { $regex: new RegExp(removeTildes(query['name']), 'i') },
-      });
+      if (query['name']) {
+        const name = removeTildes(query['name']);
+        conditions.name = { $regex: name, $options: 'i' };
+      }
+
+      if (filterDto.color) {
+        conditions.color = filterDto.color;
+      }
+
+      if (filterDto.size) {
+        conditions.size = filterDto.size;
+      }
+      if (
+        filterDto.price &&
+        (filterDto.price['min'] || filterDto.price['max'])
+      ) {
+        conditions.price = {
+          $lte: filterDto.price['max'],
+          $gte: filterDto.price['min'],
+        };
+      }
+      const productsDb = await this.ProductModel.find(conditions)
+        .skip(skip)
+        .limit(limit);
+      const productsSigned = [];
+      for (const element of productsDb) {
+        const imageSigned = await this.uploadService.getImages(
+          element.image[0],
+        );
+        productsSigned.push({
+          ...element['_doc'],
+          image: imageSigned,
+        });
+      }
+      return productsSigned;
     }
-    return await this.ProductModel.find().limit(productsPerPage).skip(skip);
   }
 
   async findOne(id: string) {
     const product = (await this.ProductModel.findById(id)) || null;
     if (product) {
-      return product;
+      const image: string[] = [];
+      for (const element of product.image) {
+        let imageSigned = await this.uploadService.getImages(element);
+        image.push(imageSigned);
+      }
+      return {
+        ...product['_doc'],
+        image: image,
+      };
     } else {
       throw new HttpException(
         'El producto no ha sido encontrado',

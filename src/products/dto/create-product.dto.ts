@@ -7,8 +7,7 @@ export class CreateProductDto {
   @IsString()
   price: string;
 
-  @IsString()
-  image: string;
+  image: any;
 
   @IsArray()
   size: string[];
@@ -16,11 +15,12 @@ export class CreateProductDto {
   @IsString()
   category: string;
 
-  @IsString()
-  description: string;
-
   @IsArray()
   color: string[];
+
+  @IsOptional()
+  @IsString()
+  description: string;
 
   @IsOptional()
   @IsString()
