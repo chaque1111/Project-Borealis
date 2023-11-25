@@ -14,13 +14,8 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(
-    @Body() loginDto: loginAuthDto,
-    @Res() res: Response,
-    @Req() request: Request,
-  ) {
+  async login(@Body() loginDto: loginAuthDto, @Res() res: Response) {
     const response = await this.authService.login(loginDto);
-    console.log(request['user']);
     res
       .status(HttpStatus.ACCEPTED)
       .header({ Authorization: response.token })

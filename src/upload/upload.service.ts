@@ -2,6 +2,7 @@ import {
   PutObjectCommand,
   S3Client,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable } from '@nestjs/common';
@@ -32,5 +33,13 @@ export class UploadService {
     };
     const command = new GetObjectCommand(getObjectParams);
     return await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+  }
+
+  async deleteImages(fileName: string) {
+    const command = new DeleteObjectCommand({
+      Bucket: this.configService.getOrThrow('S3_BUCKET_NAME'),
+      Key: fileName,
+    });
+    return this.s3Client.send(command);
   }
 }

@@ -197,7 +197,10 @@ export class ProductsService {
           HttpStatus.NOT_FOUND,
         );
       }
-      await this.ProductModel.findByIdAndRemove(id);
+      const productDelete = await this.ProductModel.findByIdAndRemove(id);
+      for (const element of productDelete.image) {
+        await this.uploadService.deleteImages(element);
+      }
       return `El producto se eliminó correctamente`;
     } else throw new HttpException('UNATHORIZED', HttpStatus.UNAUTHORIZED);
   }
